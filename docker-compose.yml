@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # NFT Photo Server Application
+  app:
+    build: .
+    container_name: nft-photo-server-kaleido
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - MONGODB_URI=mongodb://mongodb:27017/nft_db
+      - BLOCKCHAIN_RPC=${BLOCKCHAIN_RPC}
+      - CHAIN_ID=${CHAIN_ID}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+      - CONTRACT_NAME=${CONTRACT_NAME}
+      - CONTRACT_SYMBOL=${CONTRACT_SYMBOL}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-900000}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-100}
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - nft-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: nft-mongodb-kaleido
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=nft_db
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - nft-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  nft-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
