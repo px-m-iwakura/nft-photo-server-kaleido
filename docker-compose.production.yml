@@ -1,0 +1,56 @@
+services:
+  app:
+    build: .
+    container_name: nft-kaleido-production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MOCK_MODE=false
+      - MONGODB_URI=mongodb://mongodb:27017/nft_production
+      - BLOCKCHAIN_RPC=https://u1q4aby0zt:0HHfp9Fj9YnShcVwSsgaPKz9HkZJbqazpDQfyFOisHk@u1cyktimmj-u1ed8q3cmw-rpc.us1-azure.kaleido.io/
+      - CHAIN_ID=23251219
+      - CONTRACT_ADDRESS=0x4a223B8a4fcE1aBEa7b15089B1201B7750825d0f
+      - CONTRACT_NAME=HitachiNebutaToken
+      - CONTRACT_SYMBOL=HNT
+      - PRIVATE_KEY=0x5bef215975086c745de2c07f7b12fbda3cfe8be5
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=1000
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - nft-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  mongodb:
+    image: mongo:6.0
+    container_name: nft-mongodb-production
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=nft_production
+    volumes:
+      - mongodb_production_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+    networks:
+      - nft-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  nft-network:
+    driver: bridge
+
+volumes:
+  mongodb_production_data:
+    driver: local
