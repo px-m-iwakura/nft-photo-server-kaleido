@@ -50,6 +50,7 @@ services:
 networks:
   nft-network:
     driver: bridge
+    external: true
 
 volumes:
   mongodb_production_data:

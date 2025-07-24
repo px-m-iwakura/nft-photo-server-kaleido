@@ -288,18 +288,16 @@ class KaleidoBlockchainService {
       console.log('🎯 Slot:', slot);
       console.log('💎 Value:', value);
 
-      const gasEstimate = await this.contract.methods
-        .mint(userAddress, slot, value)
-        .estimateGas({ from: this.account.address });
+      const gasEstimate = Number(await this.contract.methods.mint(userAddress, slot, value).estimateGas({ from: this.account.address }));
 
-      const gasPrice = await this.web3.eth.getGasPrice();
+      const gasPrice = Number(await this.web3.eth.getGasPrice());
 
       const transaction = await this.contract.methods
         .mint(userAddress, slot, value)
         .send({
           from: this.account.address,
-          gas: Math.floor(gasEstimate * 1.2),
-          gasPrice: gasPrice
+          gas: Math.floor(Number(gasEstimate) * 1.2),
+          gasPrice: Number(gasPrice)
         });
 
       console.log('✅ Mint transaction successful');
@@ -358,6 +356,13 @@ class KaleidoBlockchainService {
       }
 
       console.log('📝 Setting token URI on Kaleido...');
+
+      // Balance check
+      const balance = await this.web3.eth.getBalance(this.account.address);
+      if (Number(this.web3.utils.fromWei(balance, "ether")) < 0.001) {
+        console.log("⚠️ Insufficient balance, skipping setTokenURI");
+        return tokenId;
+      }
       console.log('🎫 Token ID:', tokenId);
       console.log('📄 URI:', uri);
 
@@ -365,14 +370,14 @@ class KaleidoBlockchainService {
         .setTokenURI(tokenId, uri)
         .estimateGas({ from: this.account.address });
 
-      const gasPrice = await this.web3.eth.getGasPrice();
+      const gasPrice = Number(await this.web3.eth.getGasPrice());
 
       const transaction = await this.contract.methods
         .setTokenURI(tokenId, uri)
         .send({
           from: this.account.address,
-          gas: Math.floor(gasEstimate * 1.2),
-          gasPrice: gasPrice
+          gas: Math.floor(Number(gasEstimate) * 1.2),
+          gasPrice: Number(gasPrice)
         });
 
       console.log('✅ SetTokenURI transaction successful');
