@@ -220,39 +220,33 @@ app.post('/api/users/register', async (req, res) => {
 // 写真のHitachiNebutaToken登録 (Kaleido対応)
 app.post('/api/register-photo', async (req, res) => {
   try {
-    const { hash, instaPhotoUrl, likeCount } = req.body;
+    const { blockchain_account_address, instaPhotoUrl, likeCount } = req.body;
 
-    if (!hash || !instaPhotoUrl || likeCount === undefined) {
+    if (!blockchain_account_address || !instaPhotoUrl || likeCount === undefined) {
       return res.status(400).json({
         success: false,
-        error: 'ハッシュ、Instagram写真URL、いいね数は必須です'
+        error: 'アカウントアドレス、Instagram写真URL、いいね数は必須です'
       });
     }
 
-    console.log('📸 Photo registration request:', { hash, instaPhotoUrl, likeCount });
+    console.log('📸 Photo registration request:', { blockchain_account_address, instaPhotoUrl, likeCount });
 
-    const photo = await Photo.findOne({ hash });
-    if (!photo) {
-      return res.status(404).json({
-        success: false,
-        error: 'ハッシュに対応する写真が見つかりません'
-      });
-    }
-
-    const userAddress = photo.blockchain_account_address;
-    console.log('👤 User address found:', userAddress);
+    const userAddress = blockchain_account_address;
+    console.log('👤 User address:', userAddress);
 
     try {
       // Kaleidoブロックチェーンで写真用NFTをmint（slot:2, value:likeCount）
       const tokenId = await blockchainService.mint(userAddress, 2, likeCount);
       await blockchainService.setTokenURI(tokenId, instaPhotoUrl);
 
-      await Photo.findByIdAndUpdate(photo._id, {
+      // 写真情報をMongoDBに保存
+      const newPhoto = await Photo.create({
+        hash: `photo_${Date.now()}`,  // ユニークな識別子として現在時刻を使用
+        blockchain_account_address: userAddress,
         token_id: tokenId.toString(),
         upload_status: 'completed',
         likes: likeCount,
-        instagram_photo_url: instaPhotoUrl,
-        updated_at: new Date()
+        instagram_photo_url: instaPhotoUrl
       });
 
       res.json({
@@ -263,7 +257,7 @@ app.post('/api/register-photo', async (req, res) => {
         slot: 2,
         value: likeCount,
         instaPhotoUrl: instaPhotoUrl,
-        hash: hash,
+        photoId: newPhoto._id,
         blockchain: {
           network: 'Kaleido Blockchain',
           contractName: process.env.CONTRACT_NAME || 'HitachiNebutaToken',
